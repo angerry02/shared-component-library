@@ -1,0 +1,26 @@
+{
+  "name": "@qred/shared-component-library",
+  "version": "0.5.8",
+  "description": "Shared function library Qred",
+  "author": "Product team",
+  "homepage": "https://github.com/qred/shared-component-library#readme",
+  "main": "index.js",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qred/shared-component-library.git"
+  },
+  "scripts": {
+    "test": "jest",
+    "test-unit": "yarn test tests/unit",
+    "test-unit-circleci": "yarn test tests/unit --ci",
+    "test-coverage": "yarn test --coverage"
+  },
+  "dependencies": {
+    "axios": "^0.19.2"
+  },
+  "devDependencies": {
+    "aws-sdk": "^2.696.0",
+    "jest": "^26.0.1"
+  }
+}

@@ -1,0 +1,93 @@
+version: 2.1
+orbs:
+  aws-cli: circleci/aws-cli@1.0.0
+
+defaults: &defaults
+  working_directory: ~/repo
+  docker:
+    - image: circleci/node:13.12.0
+
+jobs:
+  build:
+    <<: *defaults
+    steps:
+      - checkout
+      - run:
+          name: Install Dependencies
+          command: yarn
+      - persist_to_workspace:
+          name: Save build artifacts and tests
+          root: ~/repo
+          paths: 
+            - node_modules/*
+            - src/*
+            - tests/*
+            - jest.config.json
+            - package.json
+            - index.js
+  test:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/repo
+      - run:
+          name: Run unit tests
+          command: yarn run test-unit-circleci
+  publish:
+    <<: *defaults
+    executor: aws-cli/default
+    steps:
+      - attach_workspace:
+          at: ~/repo
+      - aws-cli/setup:
+          profile-name: default
+      - run: 
+          name: Install dependencies for fetching secrets
+          command: sudo apt-get update && sudo apt-get install jq
+      - run:
+          name: Fetch the NPM Secret from AWS Secrets Manager, and Create .npmrc-file with it to authenticate to npm
+          command: |
+            npmToken=$(aws secretsmanager get-secret-value --secret-id prod/npm-user-circleci | jq --raw-output .SecretString | jq -r ."npmTokenForCircleCI") \
+            && echo "//registry.npmjs.org/:_authToken=${npmToken}" > .npmrc  
+      - run:
+          name: Publish the npm package
+          command: npm publish
+
+workflows:
+  version: 2
+  feature-pipeline:
+    jobs:
+      - build:
+          filters:
+            branches:
+              ignore:
+                - master
+      - test:
+          requires: 
+            - build
+          filters:
+            branches:
+              ignore:
+                - master
+  master-pipeline:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only:
+                - master
+      - test:
+          requires: 
+            - build
+          filters:
+            branches:
+              only:
+                - master
+      - publish:
+          context: aws-credentials
+          requires: 
+            - test
+          filters:
+            branches:
+              only:
+                - master
